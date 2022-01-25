@@ -2,80 +2,87 @@ package com.example.local_server;
 
 
 import android.content.res.AssetManager;
-import android.os.Build;
-import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.Socket;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.util.Objects;
+import java.util.Scanner;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class WebSocketHandler {
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    public void handle(Socket client, String data, AssetManager mAssets) {
+public class WebSocketHandler {
+    AssetManager mAssets;
+    public WebSocketCallback callback;
+    private OutputStream out;
+    private ServerSocket server;
+    public ArrayBlockingQueue<String> messages = new ArrayBlockingQueue<>(20);
+
+    public void setCallback(WebSocketCallback callback) {
+        this.callback = callback;
+    }
+
+    public Boolean isClientConnected = false;
+
+
+    public WebSocketHandler(AssetManager mAssets) {
+        this.mAssets = mAssets;
+    }
+
+    public void handle(Socket client, ServerSocket webSocket) {
         try {
 
-
             InputStream in = client.getInputStream();
-            OutputStream out = client.getOutputStream();
-
+            out = client.getOutputStream();
+            this.server = webSocket;
+            Scanner s = new Scanner(in, "UTF-8");
 
             try {
-                System.out.println(data);
+                String data = s.useDelimiter("\\r\\n\\r\\n").next();
                 Matcher get = Pattern.compile("^GET").matcher(data);
-                System.out.println("in -1");
+
 
                 if (get.find()) {
-                    System.out.println("in 1");
                     Matcher match = Pattern.compile("Sec-WebSocket-Key: (.*)").matcher(data);
                     match.find();
+                    String key = SHA1(match.group(1) + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
+
                     byte[] response = ("HTTP/1.1 101 Switching Protocols\r\n"
                             + "Connection: Upgrade\r\n"
                             + "Upgrade: websocket\r\n"
                             + "Sec-WebSocket-Accept: "
-                            + Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest((match.group(1) + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").getBytes("UTF-8")))
-                            + "\r\n\r\n").getBytes("UTF-8");
+                            + key
+                            + "\r\n\r\n").getBytes(StandardCharsets.UTF_8);
+
                     out.write(response, 0, response.length);
-                    startBroadCasting(mAssets,out);
-                    System.out.println("A client connected.");
+                    isClientConnected = true;
+                    activateWriter();
                     printInputStream(in);
 
 
                 }
-            } catch (NoSuchAlgorithmException e) {
-                Log.d("closed", "exception");
-
-                e.printStackTrace();
             } finally {
-                Log.d("closed", "handle: finaly");
+                Log.d("WebSocket", "Closed");
+                isClientConnected = false;
             }
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+            callback.onError(e);
         } finally {
-            Log.d("closed", "handle: ");
-            //  server.close();
-        }
+            Log.d("WebSocket", "Closed");        }
 
 
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private static void printInputStream(InputStream inputStream) throws IOException {
+    private void printInputStream(InputStream inputStream) throws IOException {
         byte[] b = new byte[8000];//incoming buffer
         byte[] message = null;//buffer to assemble message in
         byte[] masks = new byte[4];
@@ -106,8 +113,8 @@ public class WebSocketHandler {
                         length = (int) rLength;
                         if (rLength == (byte) 126) {
                             rMaskIndex = 4;
-                            length = Byte.toUnsignedInt(b[2]) << 8;
-                            length += Byte.toUnsignedInt(b[3]);
+                            length = ((int) b[2]) & 0xff << 8;
+                            length += ((int) b[3]) & 0xff;
                         } else if (rLength == (byte) 127)
                             rMaskIndex = 10;
                         for (i = rMaskIndex; i < (rMaskIndex + 4); i++) {
@@ -135,7 +142,7 @@ public class WebSocketHandler {
                         isSplit = true;
                     } else {
                         isSplit = false;
-                        System.out.println(new String(message));
+                        callback.onMessageReceived(new String(message));
                         b = new byte[8000];
                     }
 
@@ -201,18 +208,37 @@ public class WebSocketHandler {
 
         return reply;
     }
-    public void startBroadCasting(AssetManager mAssets,OutputStream out) throws IOException {
-        int count = 1;
-        while (true){
-            String data ;
-            if (count%2 == 0)
-                data = "audio_stats.json";
-            else
-                data = "video_stats.json";
-            byte[] json = encode(Objects.requireNonNull(Utils.getJsonFromAssets(mAssets, data)));
-            out.write(json);
-            count++;
-            SystemClock.sleep(3000);
+
+    public void activateWriter(){
+
+        new Thread(() -> {
+            try {
+                while (isClientConnected) {
+                    try {
+                            out.write(encode(messages.take()));
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        callback.onError(e);
+                    }
+                }
+
+
+            } catch (Exception e) {
+                callback.onError(e);
+            }
+        }).start();
+
+    }
+
+    private static String SHA1(String text) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-1");
+            md.update(text.getBytes(StandardCharsets.ISO_8859_1), 0, text.length());
+            byte[] sha1hash = md.digest();
+            return android.util.Base64.encodeToString(sha1hash, android.util.Base64.NO_WRAP);
+        } catch (Exception ex) {
+            return null;
         }
     }
+
 }

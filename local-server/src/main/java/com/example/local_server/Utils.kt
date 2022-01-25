@@ -9,19 +9,24 @@ import java.io.InputStream
 
 
 object Utils {
-    private const val TAG = "Utils"
 
     fun detectMimeType(fileName: String): String? {
-        return if (TextUtils.isEmpty(fileName)) {
-            null
-        } else if (fileName.endsWith(".html")) {
-            "text/html"
-        } else if (fileName.endsWith(".js")) {
-            "application/javascript"
-        } else if (fileName.endsWith(".css")) {
-            "text/css"
-        } else {
-            "application/octet-stream"
+        return when {
+            TextUtils.isEmpty(fileName) -> {
+                null
+            }
+            fileName.endsWith(".html") -> {
+                "text/html"
+            }
+            fileName.endsWith(".js") -> {
+                "application/javascript"
+            }
+            fileName.endsWith(".css") -> {
+                "text/css"
+            }
+            else -> {
+                "application/octet-stream"
+            }
         }
     }
 
