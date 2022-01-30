@@ -164,8 +164,8 @@ class LogQueue
     enqueue(log)
     {
       var message = JSON.parse(log);
-      if(this.logs.length==50){
-        this.dequeue
+      if(this.logs.length>=50){
+        this.dequeue()
       }
       addToLogCat(message);
       this.logs.push(message);
@@ -173,6 +173,7 @@ class LogQueue
     dequeue()
     {
        this.logs.shift();
+       $('#log_cat_div').find('div').first().remove();
     }
 
     isEmpty()
