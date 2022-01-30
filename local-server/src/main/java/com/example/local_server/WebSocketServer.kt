@@ -3,6 +3,9 @@ package com.example.local_server
 
 import android.content.Context
 import android.util.Log
+import com.example.local_server.model.JsonData
+import com.example.local_server.model.LogMessage
+import com.google.gson.Gson
 import java.io.IOException
 import java.net.ServerSocket
 import java.net.SocketException
@@ -53,12 +56,25 @@ class WebSocketServer(context: Context?, port: Int) : Runnable {
         }
     }
 
-       fun sendToClient(message : String){
+       fun sendStatsToClient(statistics : JsonData){
+           sendJsonStringToClient(statistics)
+    }
+
+    private fun sendJsonStringToClient(statistics: JsonData) {
         mRequestHandler.apply {
-            if (isClientConnected)
-                messages.offer(message)
-            else
+            if (isClientConnected) {
+                val data = Gson().toJson(statistics)
+                messages.offer(data)
+            } else
                 callback.onError(Exception("Client not connected"))
+        }
+    }
+
+    fun sendLogMessage(logMessage : LogMessage){
+        val data = Gson().toJson(logMessage)
+        JsonData(JsonData.LOG_MESSAGE,data).also {
+            sendJsonStringToClient(it)
+
         }
     }
 

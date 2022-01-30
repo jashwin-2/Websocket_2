@@ -5,15 +5,42 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel='shortcut icon' href='favicon.ico' type='image/x-icon'>
+    <!-- Latest compiled and minified CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="app.css" />
+
+    <!-- jQuery library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <!-- Latest compiled JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+
 </head>
 <body>
-<h1>Json data</h1>
+<h1><b>Statistics</b></h1>
 <div id="json"></div>
+<table class="table table-borderless">
+    <thead>
+    <tr>
+        <th scope="col">Audio Stats</th>
+        <th scope="col">Video Stats</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <td id="audio_col"></td>
+        <td id ="video_col"></td>
+    </tr>
+    </tbody>
+</table>
+<h1><b>Log Cat</b></h1>
+<div id="log_cat_div" style="overflow:auto" class="table-wrapper-scroll-y my-custom-scrollbar">
 
+</div>
 </body>
-<script type="text/javascript" src="http://code.jquery.com/jquery-latest.min.js"></script>
-<script type="text/javascript" src="http://code.jquery.com/jquery-latest.min.js"></script>
 
 <script type="text/javascript" src="app.js"></script>
 

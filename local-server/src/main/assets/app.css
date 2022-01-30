@@ -1,7 +1,77 @@
+
 html {
     font-family: Arial, Helvetica, sans-serif;
 }
 
-    div{
-      padding-left: 50px;
-    }
+
+
+
+details[open] summary
+{
+font-weight: bold;
+}
+
+details > summary {
+    list-style-type: none;
+    padding-top : 6px;
+}
+
+details > summary::-webkit-details-marker {
+    display: none;
+}
+
+details > summary::before {
+
+        padding-right: 10px;
+           content: "\f0d7";
+           font-family: FontAwesome;
+}
+
+details[open] > summary::before {
+    content: '\f0d8';
+    font-family: FontAwesome;
+}
+
+
+.table-borderless > tbody > tr > td,
+.table-borderless > tbody > tr > th,
+.table-borderless > tfoot > tr > td,
+.table-borderless > tfoot > tr > th,
+.table-borderless > thead > tr > td,
+.table-borderless > thead > tr > th {
+
+    padding-left : 16px;
+}
+
+.table-borderless {
+    table-layout: fixed;
+     over-flow: break-word;
+}
+.table-borderless{
+   max-width : 95%;
+}
+
+.my-custom-scrollbar {
+position: relative;
+overflow: scroll;
+
+}
+.table-wrapper-scroll-y {
+display: block;
+
+}
+#log_cat_div{
+    height: 600px;
+    padding: 4px;
+    padding-left : 28px;
+    padding-top : 18px;
+
+}
+
+th{
+ font-size : 26px;
+}
+h1{
+padding-left : 16px;
+padding-bottom : 8px;
+}

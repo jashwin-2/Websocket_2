@@ -6,6 +6,8 @@ import java.io.ByteArrayOutputStream
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
+import java.text.SimpleDateFormat
+import java.util.*
 
 
 object Utils {
@@ -68,5 +70,9 @@ object Utils {
         }
     }
 
+    fun getCurrentTime(): String {
+        val sdf = SimpleDateFormat("dd/M/yyyy hh:mm:ss")
+        return sdf.format(Date())
+    }
 
 }

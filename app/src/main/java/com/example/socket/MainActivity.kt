@@ -8,6 +8,8 @@ import com.example.local_server.Socket
 import com.example.local_server.Utils.getJsonFromAssets
 import com.example.local_server.WebSocketCallback
 import com.example.local_server.WebSocketServer
+import com.example.local_server.model.JsonData
+import com.example.local_server.model.LogMessage
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -23,7 +25,7 @@ class MainActivity : AppCompatActivity() {
 
         Socket.setOnErrorListener {
             Log.d("Error", it.stackTraceToString())
-            Toast.makeText(this,it.localizedMessage,Toast.LENGTH_LONG).show()
+            Toast.makeText(this, it.localizedMessage, Toast.LENGTH_LONG).show()
         }
 
         Socket.initialize(context = applicationContext, serverPort = 8000) { webSocket ->
@@ -53,8 +55,9 @@ class MainActivity : AppCompatActivity() {
                 delay(1000)
                 if (webSocket?.isClientConnected() == true) {
                     getMessage()?.let {
-                        webSocket?.sendToClient(it)
+                        webSocket?.sendStatsToClient(it)
                     }
+                    sendLog()
                 }
 
             }
@@ -67,10 +70,32 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    fun getMessage(): String? {
-//        count
-//        val data = if (count % 2 == 0) "audio_stats.json" else "video_stats.json"
-        val data = "audio_stats.json"
-        return Objects.requireNonNull(getJsonFromAssets(this.assets, data))
+    fun getMessage(): JsonData? {
+        count++
+        val fileName: String
+        val type: Int
+        if (count % 2 == 0) {
+            fileName = "audio_stats.json"
+            type = JsonData.AUDIO_STATS
+
+        } else {
+            fileName = "video_stats.json"
+            type = JsonData.VIDEO_STATS
+        }
+        val stats = Objects.requireNonNull(getJsonFromAssets(this.assets, fileName))
+        return stats?.let { JsonData(type, it) }
+
+    }
+
+    fun sendLog() {
+        LogMessage(LogMessage.ERROR, "Error Log").also {
+            webSocket?.sendLogMessage(it)
+        }
+        LogMessage(LogMessage.INFO, "Info log ").also {
+            webSocket?.sendLogMessage(it)
+        }
+        LogMessage(LogMessage.WARN, "Warn Log").also {
+            webSocket?.sendLogMessage(it)
+        }
     }
 }
