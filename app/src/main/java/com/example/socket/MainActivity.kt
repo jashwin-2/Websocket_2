@@ -4,7 +4,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.local_server.Socket
+import com.example.local_server.LoggerAgent
 import com.example.local_server.Utils.getJsonFromAssets
 import com.example.local_server.WebSocketCallback
 import com.example.local_server.WebSocketServer
@@ -23,19 +23,19 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        Socket.setOnErrorListener {
+        LoggerAgent.setOnErrorListener {
             Log.d("Error", it.stackTraceToString())
             Toast.makeText(this, it.localizedMessage, Toast.LENGTH_LONG).show()
         }
 
-        Socket.initialize(context = applicationContext, serverPort = 8000) { webSocket ->
+        LoggerAgent.initialize(context = applicationContext, serverPort = 8000) { webSocket ->
             Log.d("Success", "Socket initialized")
 
             this.webSocket = webSocket
         }
 
 
-        et_address.text = Socket.getAddress()
+        et_address.text = LoggerAgent.getAddress()
 
         webSocket?.setWebSocketCallback(object : WebSocketCallback {
             override fun onError(ex: Exception?) {
@@ -66,7 +66,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        Socket.shutDown()
+        LoggerAgent.shutDown()
         super.onDestroy()
     }
 
@@ -88,14 +88,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun sendLog() {
-        LogMessage(LogMessage.ERROR, "Error Log").also {
-            webSocket?.sendLogMessage(it)
-        }
-        LogMessage(LogMessage.INFO, "Info log ").also {
-            webSocket?.sendLogMessage(it)
-        }
-        LogMessage(LogMessage.WARN, "Warn Log").also {
-            webSocket?.sendLogMessage(it)
-        }
+            LogMessage(LogMessage.ERROR, "Error Log").also {
+                webSocket?.sendLogMessage(it)
+            }
+            LogMessage(LogMessage.INFO, "Info log ").also {
+                webSocket?.sendLogMessage(it)
+            }
+            LogMessage(LogMessage.WARN, "Warn Log").also {
+                webSocket?.sendLogMessage(it)
+            }
+
+
     }
 }

@@ -2,6 +2,7 @@ package com.example.local_server
 
 
 import android.content.Context
+import android.os.Handler
 import android.util.Log
 import com.example.local_server.model.JsonData
 import com.example.local_server.model.LogMessage
@@ -9,13 +10,16 @@ import com.google.gson.Gson
 import java.io.IOException
 import java.net.ServerSocket
 import java.net.SocketException
+import java.util.*
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.timerTask
 
 
 class WebSocketServer(context: Context?, port: Int) : Runnable {
     private val mPort: Int = port
     private val mRequestHandler: WebSocketHandler = WebSocketHandler(context?.assets)
     var isRunning = false
-        private set
     private var weSocket: ServerSocket? = null
 
     fun start() {
@@ -40,7 +44,6 @@ class WebSocketServer(context: Context?, port: Int) : Runnable {
         try {
             weSocket = ServerSocket(mPort)
             while (isRunning) {
-
                 val socket = weSocket!!.accept()
                 mRequestHandler.handle(socket,weSocket)
                 socket.close()
@@ -70,12 +73,12 @@ class WebSocketServer(context: Context?, port: Int) : Runnable {
         }
     }
 
-    fun sendLogMessage(logMessage : LogMessage){
-        val data = Gson().toJson(logMessage)
-        JsonData(JsonData.LOG_MESSAGE,data).also {
-            sendJsonStringToClient(it)
+    fun sendLogMessage(logMessage : LogMessage) {
+            val data = Gson().toJson(logMessage)
+            JsonData(JsonData.LOG_MESSAGE,data).also {
+                sendJsonStringToClient(it)
+            }
 
-        }
     }
 
     fun isClientConnected(): Boolean = mRequestHandler.isClientConnected
@@ -85,5 +88,6 @@ class WebSocketServer(context: Context?, port: Int) : Runnable {
     companion object {
         private const val TAG = "ClientServer"
     }
+
 
 }

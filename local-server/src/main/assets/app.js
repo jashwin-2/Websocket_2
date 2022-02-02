@@ -19,11 +19,13 @@ var  log_queue;
 var logCatDiv = document.getElementById("log_cat_div")
 var latestAudioStats;
 var latestVideoStats;
+var isLoggerIsActive = false;
 
 $(document).ready(function(){
   log_queue = new LogQueue();
   initializeSocket();
   document.getElementById('log_cat_div').scrollIntoView({ behavior: 'smooth', block: 'end' });
+
 });
 
 
@@ -96,7 +98,7 @@ function create(data,type){
          $('td#video_col').append(detail)
 
 })
-setToggleListener();
+    setToggleListener();
 };
 
 
@@ -124,7 +126,7 @@ function update(data,type){
       var row =document.getElementById("value-"+key+"-"+key1)
      row.innerHTML = value1
     })
-         console.log(key + " updated with currently received data")
+         console.log(key + " updated using currently received data")
 
     }
    }
@@ -152,7 +154,7 @@ for(var i = 0; i < searchEles.length; i++) {
 return matches;
 }
 
-
+var logger;
 class LogQueue
 {
     constructor()
@@ -164,16 +166,27 @@ class LogQueue
     enqueue(log)
     {
       var message = JSON.parse(log);
-      if(this.logs.length>=50){
-        this.dequeue()
-      }
-      addToLogCat(message);
-      this.logs.push(message);
+
+if(!isLoggerIsActive)
+    {
+        logger= setInterval(activateLogger, 500);
+        isLoggerIsActive = true;
+                console.log("logger Started")
+
     }
+           this.logs.push(message);
+    }
+
+
     dequeue()
     {
-       this.logs.shift();
-       $('#log_cat_div').find('div').first().remove();
+       if(this.isEmpty()){
+        clearInterval(logger);
+        isLoggerIsActive = false;
+        console.log("logger Stoped")
+        return null;
+       }
+       return this.logs.shift();
     }
 
     isEmpty()
@@ -181,24 +194,29 @@ class LogQueue
         return this.logs.length == 0;
     }
 }
+function activateLogger() {
 
-function addToLogCat(log) {
+              var log = log_queue.dequeue();
 
-  const isScrolledToBottom = logCatDiv.scrollHeight - logCatDiv.clientHeight <= logCatDiv.scrollTop + 1
-          const newLogMessage = document.createElement("div")
-              newLogMessage.innerHTML = "<p>"+log.time +"&ensp;"+log.logLevel+":&emsp;"+log.logMessage+"</p>";
-            if(log.logLevel ==LogLevels.ERROR)
-               newLogMessage.style.color ='red'
-            else if(log.logLevel == LogLevels.INFO)
-              newLogMessage.style.color = 'lightblue'
+              if(log==null)
+                return
+              const isScrolledToBottom = logCatDiv.scrollHeight - logCatDiv.clientHeight <= logCatDiv.scrollTop + 1
+                      const newLogMessage = document.createElement("div")
+                          newLogMessage.innerHTML = "<p>"+log.time +"&ensp;"+log.logLevel+":&emsp;"+log.logMessage+"</p>";
+                        if(log.logLevel ==LogLevels.ERROR)
+                           newLogMessage.style.color ='red'
+                        else if(log.logLevel == LogLevels.INFO)
+                          newLogMessage.style.color = 'lightblue'
 
-           logCatDiv.appendChild(newLogMessage);
+                       logCatDiv.appendChild(newLogMessage);
+                       removeLogIfExceedLimit();
 
-    // scroll to bottom if isScrolledToBottom is true
-    if (isScrolledToBottom) {
-      logCatDiv.scrollTop = logCatDiv.scrollHeight - logCatDiv.clientHeight
-    }
-}
+                // scroll to bottom if isScrolledToBottom is true
+                if (isScrolledToBottom) {
+                  logCatDiv.scrollTop = logCatDiv.scrollHeight - logCatDiv.clientHeight
+                }
+            }
+
 function setToggleListener(){
 
   const detailsElements = document.querySelectorAll('details')
@@ -233,8 +251,14 @@ function updateRow(data,rowTitle){
     row.innerHTML = value
 
    })
-  console.log(rowTitle + " updated with stored data")
+  console.log(rowTitle + " updated using stored data")
 
   }
 
+function removeLogIfExceedLimit() {
+  var len =$("#log_cat_div").children().length;
 
+    if(len>=50){
+           $('#log_cat_div').find('div').first().remove();
+    }
+}

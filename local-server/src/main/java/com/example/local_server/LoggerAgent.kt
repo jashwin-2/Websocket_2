@@ -5,8 +5,8 @@ import android.util.Log
 import java.lang.Exception
 import java.lang.NumberFormatException
 
-object Socket {
-    private val TAG = Socket::class.java.simpleName
+object LoggerAgent {
+    private val TAG = LoggerAgent::class.java.simpleName
     private const val DEFAULT_PORT = 8000
     private const val WEB_SOCKET_PORT = 8001
     private var clientServer: ClientServer? = null
