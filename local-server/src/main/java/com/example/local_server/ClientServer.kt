@@ -13,7 +13,6 @@ class ClientServer(context: Context?, port: Int) : Runnable {
     private var onError : ((Exception) -> Unit)? = null
     private val mRequestHandler: RequestHandler = RequestHandler(context!!)
     var isRunning = false
-        private set
     private var mServerSocket: ServerSocket? = null
 
     fun start(onError: ((Exception) -> Unit)?) {

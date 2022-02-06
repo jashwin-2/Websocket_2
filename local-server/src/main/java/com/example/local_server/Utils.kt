@@ -32,7 +32,6 @@ object Utils {
         }
     }
 
-    @Throws(IOException::class)
     fun loadContent(fileName: String?, assetManager: AssetManager): ByteArray? {
         var input: InputStream? = null
         return try {

@@ -1,8 +1,9 @@
 
 const MessageTypes = {
-  AUDIO_STATS: 1,
-  VIDEO_STATS: 2,
-  LOG_MESSAGE: 3
+  TABLE_DATA : 1,
+  LOG_MESSAGE : 2,
+  GRAPH_DATA : 3,
+  INITIAL_DATA : 4
 };
 
 const LogLevels = {
@@ -16,16 +17,17 @@ Object.freeze(LogLevels);
 
 
 var  log_queue;
-var logCatDiv = document.getElementById("log_cat_div")
-var latestAudioStats;
-var latestVideoStats;
+var logCatDiv;
+var latestStats=new Map();
 var isLoggerIsActive = false;
+var ids =new Map();
+var tables;
+var log;
+var graphs;
 
 $(document).ready(function(){
   log_queue = new LogQueue();
   initializeSocket();
-  document.getElementById('log_cat_div').scrollIntoView({ behavior: 'smooth', block: 'end' });
-
 });
 
 
@@ -38,21 +40,18 @@ socket.onopen = function(e) {
 socket.onmessage = function(event) {
   var jsonData = JSON.parse(event.data);
 
-
-  if(jsonData.type == MessageTypes.AUDIO_STATS){
-   if(getDetails(1).length==0)
-      create(jsonData.json,MessageTypes.AUDIO_STATS);
+  if(jsonData.type == MessageTypes.TABLE_DATA){
+   if(getDetails(jsonData.id).length==0)
+      createTable(jsonData.json,jsonData.id);
     else
-      update(jsonData.json,MessageTypes.AUDIO_STATS);
+      update(jsonData.json,jsonData.id);
   }
-  else if(jsonData.type == MessageTypes.VIDEO_STATS){
-      if(getDetails(2).length==0)
-        create(jsonData.json,MessageTypes.VIDEO_STATS);
-      else
-        update(jsonData.json,MessageTypes.VIDEO_STATS);
-  }
-  else{
+  else if(jsonData.type == MessageTypes.LOG_MESSAGE){
       log_queue.enqueue(jsonData.json);
+  }
+  else if(jsonData.type == MessageTypes.INITIAL_DATA){
+     var data = JSON.parse(jsonData.json);
+     setIds(data);
   }
 
 
@@ -73,14 +72,52 @@ socket.onerror = function(error) {
 
 }
 
-function create(data,type){
+function initializeWebPage(){
+
+  if(tables.length!=0)
+    {
+      $('body#body').append('<h1><b>Tables</b></h1>');
+      $('body#body').append('<div id=\"no_data\"class=\"no_data_div \"> No data </div>')
+      var parentTable =$('<table/>',{id:"parent_table",class:"table table-borderless"})
+      var tableBody =  $('<tbody>')
+      parentTable.append(tableBody);
+      var i = 0;
+      while(i<tables.length){
+        if((i+1)<tables.length){
+          tableBody.append('<th scope=\"col\">'+tables[i].second+'</th>')
+          tableBody.append('<th scope=\"col\">'+tables[i+1].second+'</th>')
+          tableBody.append('<tr><td id=\"'+tables[i].second.replace(/ /g,'')+'\"></td><td id =\"'+tables[i+1].second.replace(/ /g,'') +'\"></td></tr>')
+          i=i+2;
+        }
+        else{
+          tableBody.append('<th scope=\"col\">'+tables[i].second+'</th>')
+          tableBody.append('<tr><td id=\"'+tables[i].second.replace(/ /g,'')+'\"></td></tr>')
+          break;
+        }
+      }
+      var div = $('<div/>',{id :"parent_table_div",class:"table_div"});
+      div.append(parentTable)
+      $('body#body').append(div);
+       document.getElementById("parent_table_div").style.visibility = "hidden"
+    }
+
+    if(log!=null){
+      $('body#body').append('<h1><b>'+log.second+'</b></h1><div id="log_cat_div" style="overflow:auto" class="table-wrapper-scroll-y my-custom-scrollbar">');
+      logCatDiv = document.getElementById("log_cat_div")
+
+    }
+
+}
+
+function createTable(data,id){
     var stats = JSON.parse(data)
+
     Object.entries(stats).forEach((entry) =>{
     const [key , value] = entry;
-    var detail=$('<details/>',{id:"detail-"+type+key,class:"details"})
+    var detail=$('<details/>',{id:"detail-"+id+key,class:"details"})
     detail.append('<summary style=\"word-break: break-all\" >'+key+'</summary>')
     var table = $('<table class=\"table table-borderless\">',{id:key+'table'})
-    var body = $('<tbody>',{id:key+'body'})
+    var body = $('<tbody>',{id:key+'body',class:"inner-table-body"})
     table.append(body)
     detail.append(table)
     Object.entries(value).forEach((entry1) =>{
@@ -92,25 +129,52 @@ function create(data,type){
     body.append(row)
 
 })
-    if(type == MessageTypes.AUDIO_STATS)
-         $('td#audio_col').append(detail)
-    else
-         $('td#video_col').append(detail)
-
+  $('td#'+ids.get(id)).append(detail)
+  addToggleListener(id,key)
+  
 })
-    setToggleListener();
-};
+
+ var parent_table = document.getElementById('parent_table_div')
+if(parent_table.style.visibility === "hidden"){
+  document.getElementById('no_data').style.display = "none"
+  parent_table.style.visibility = "visible"
+}
+}
+
+function addToggleListener(id,key){
+  var detail = document.getElementById("detail-"+id+key)
+  detail.addEventListener('toggle', () => {
+   if (detail.open) {
+     updateStats(detail);
+   }
+ })
+}
+
+function setIds(data){
+  tables = data.tables
+  graphs = data.graphs
+  log = data.log
+  addToMap(tables)
+  addToMap(graphs)
+  console.log(ids)
+  if(log!=null)
+  ids.set(log.first,log.second)
+  initializeWebPage();
+
+}
+
+function addToMap(idsList){
+  for(let i=0;i<idsList.length;i++){
+    ids.set(idsList[i].first,idsList[i].second.replace(/ /g,''))
+  }
+}
 
 
-function update(data,type){
-  var opened = getDetails(type).filter(detail=> detail.hasAttribute("open"))
+function update(data,id){
+  var opened = getDetails(id).filter(detail=> detail.hasAttribute("open"))
    var stats = JSON.parse(data)
 
-   if(type == MessageTypes.AUDIO_STATS)
-   latestAudioStats = stats
-   else
-   latestVideoStats =stats
-
+   latestStats.set(id,stats)
 
    if(opened.length==0)
       return
@@ -118,7 +182,7 @@ function update(data,type){
    Object.entries(stats).forEach((entry) =>
    {
     const [key , value] = entry;
-    var detail = document.getElementById("detail-"+type+key)
+    var detail = document.getElementById("detail-"+id+key)
     if(opened.indexOf(detail) != -1){
     Object.entries(value).forEach((entry1) =>
     {
@@ -138,11 +202,9 @@ function update(data,type){
 function getDetails(statsType){
 
 var matches = [];
-var type =  ""
-if(statsType==MessageTypes.AUDIO_STATS)
-    type= "audio_col"
-else
-    type = "video_col"
+
+var type =  ids.get(statsType)
+
 var searchEles = document.getElementById(type).children;
 for(var i = 0; i < searchEles.length; i++) {
 
@@ -217,28 +279,12 @@ function activateLogger() {
                 }
             }
 
-function setToggleListener(){
-
-  const detailsElements = document.querySelectorAll('details')
-
-detailsElements.forEach((detail) => {
-  detail.addEventListener('toggle', () => {
-    if (detail.open) {
-      updateStats(detail);
-    }
-  })
-})
-
-}
 
 function updateStats(detail){
   var id = detail.id;
-  var updatedStats;
-  if(id[7]==1)
-    updatedStats = latestAudioStats;
-  else
-    updatedStats = latestVideoStats;
-
+  var updatedStats=latestStats.get(parseInt(id[7]));
+  if(updatedStats == null)
+    return
   var rowTitle = id.substring(8);
   updateRow(updatedStats[rowTitle],rowTitle);
 }

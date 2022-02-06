@@ -2,23 +2,19 @@ package com.example.local_server
 
 
 import android.content.Context
-import android.os.Handler
 import android.util.Log
+import com.example.local_server.model.SessionDetails
 import com.example.local_server.model.JsonData
 import com.example.local_server.model.LogMessage
 import com.google.gson.Gson
 import java.io.IOException
 import java.net.ServerSocket
 import java.net.SocketException
-import java.util.*
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.TimeUnit
-import kotlin.concurrent.timerTask
 
 
-class WebSocketServer(context: Context?, port: Int) : Runnable {
+class WebSocketServer(context: Context?, port: Int, sessionDetails : SessionDetails) : Runnable {
     private val mPort: Int = port
-    private val mRequestHandler: WebSocketHandler = WebSocketHandler(context?.assets)
+    private val mRequestHandler: WebSocketHandler = WebSocketHandler(context?.assets,sessionDetails)
     var isRunning = false
     private var weSocket: ServerSocket? = null
 
@@ -45,7 +41,7 @@ class WebSocketServer(context: Context?, port: Int) : Runnable {
             weSocket = ServerSocket(mPort)
             while (isRunning) {
                 val socket = weSocket!!.accept()
-                mRequestHandler.handle(socket,weSocket)
+                mRequestHandler.handle(socket)
                 socket.close()
 
             }
@@ -75,7 +71,7 @@ class WebSocketServer(context: Context?, port: Int) : Runnable {
 
     fun sendLogMessage(logMessage : LogMessage) {
             val data = Gson().toJson(logMessage)
-            JsonData(JsonData.LOG_MESSAGE,data).also {
+            JsonData(JsonData.LOG_MESSAGE,4,data).also {
                 sendJsonStringToClient(it)
             }
 

@@ -4,10 +4,11 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.local_server.LoggerAgent
+import com.example.local_server.LoggingAgent
 import com.example.local_server.Utils.getJsonFromAssets
 import com.example.local_server.WebSocketCallback
 import com.example.local_server.WebSocketServer
+import com.example.local_server.model.SessionDetails
 import com.example.local_server.model.JsonData
 import com.example.local_server.model.LogMessage
 import kotlinx.android.synthetic.main.activity_main.*
@@ -19,23 +20,41 @@ import java.util.*
 class MainActivity : AppCompatActivity() {
     var count = 1
     var webSocket: WebSocketServer? = null
+
+    companion object {
+        const val AUDIO_STATS = 1
+        const val VIDEO_STATS = 2
+        const val STATS_1 = 3
+        const val STATS_2 = 4
+        const val LOGS = 5
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        LoggerAgent.setOnErrorListener {
+        LoggingAgent.setOnErrorListener {
             Log.d("Error", it.stackTraceToString())
             Toast.makeText(this, it.localizedMessage, Toast.LENGTH_LONG).show()
         }
-
-        LoggerAgent.initialize(context = applicationContext, serverPort = 8000) { webSocket ->
+        val sessionDetails = SessionDetails(
+            listOf(
+                AUDIO_STATS to "Audio Stats",
+                VIDEO_STATS to "Video Stats", STATS_1 to "Stats 4", STATS_2 to "Stats 5"
+            ), LOGS to "Logs"
+        )
+        LoggingAgent.initialize(
+            context = applicationContext,
+            serverPort = 8000,
+            sessionDetails
+        ) { webSocket ->
             Log.d("Success", "Socket initialized")
 
             this.webSocket = webSocket
         }
 
 
-        et_address.text = LoggerAgent.getAddress()
+        et_address.text = LoggingAgent.getAddress()
 
         webSocket?.setWebSocketCallback(object : WebSocketCallback {
             override fun onError(ex: Exception?) {
@@ -54,9 +73,7 @@ class MainActivity : AppCompatActivity() {
             while (true) {
                 delay(1000)
                 if (webSocket?.isClientConnected() == true) {
-                    getMessage()?.let {
-                        webSocket?.sendStatsToClient(it)
-                    }
+                    sendStats()
                     sendLog()
                 }
 
@@ -66,37 +83,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        LoggerAgent.shutDown()
+        LoggingAgent.shutDown()
         super.onDestroy()
     }
 
-    fun getMessage(): JsonData? {
-        count++
-        val fileName: String
-        val type: Int
-        if (count % 2 == 0) {
-            fileName = "audio_stats.json"
-            type = JsonData.AUDIO_STATS
-
-        } else {
-            fileName = "video_stats.json"
-            type = JsonData.VIDEO_STATS
-        }
-        val stats = Objects.requireNonNull(getJsonFromAssets(this.assets, fileName))
-        return stats?.let { JsonData(type, it) }
+    fun sendStats() {
+        val type = JsonData.TABLE_DATA
+        val audioStats = Objects.requireNonNull(getJsonFromAssets(this.assets, "audio_stats.json"))
+        val videoStats = Objects.requireNonNull(getJsonFromAssets(this.assets, "video_stats.json"))
+        webSocket?.sendStatsToClient(JsonData(type, VIDEO_STATS, videoStats!!))
+        webSocket?.sendStatsToClient(JsonData(type, STATS_1, videoStats!!))
+        webSocket?.sendStatsToClient(JsonData(type, STATS_2, audioStats!!))
+        webSocket?.sendStatsToClient(JsonData(type, AUDIO_STATS, audioStats!!))
 
     }
 
     fun sendLog() {
-            LogMessage(LogMessage.ERROR, "Error Log").also {
-                webSocket?.sendLogMessage(it)
-            }
-            LogMessage(LogMessage.INFO, "Info log ").also {
-                webSocket?.sendLogMessage(it)
-            }
-            LogMessage(LogMessage.WARN, "Warn Log").also {
-                webSocket?.sendLogMessage(it)
-            }
+        LogMessage(LogMessage.ERROR, "Error Log").also {
+            webSocket?.sendLogMessage(it)
+        }
+        LogMessage(LogMessage.INFO, "Info log ").also {
+            webSocket?.sendLogMessage(it)
+        }
+        LogMessage(LogMessage.WARN, "Warn Log").also {
+            webSocket?.sendLogMessage(it)
+        }
 
 
     }

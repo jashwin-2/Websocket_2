@@ -41,11 +41,14 @@ details[open] > summary::before {
 .table-borderless > thead > tr > th {
 
     padding-left : 16px;
+    border-block-color : #5b5b5bd6 ;
 }
 
 .table-borderless {
     table-layout: fixed;
      over-flow: break-word;
+     border-radius: 8px;
+     padding : 8px;
 }
 .table-borderless{
    max-width : 95%;
@@ -65,13 +68,43 @@ display: block;
     padding: 4px;
     padding-left : 28px;
     padding-top : 18px;
-
+    border-radius: 10px;
+    margin : 10px;
+background-color:#383737;
 }
 
 th{
  font-size : 26px;
+ padding-top : 10px;
+ padding-left : 30px;
 }
 h1{
 padding-left : 16px;
 padding-bottom : 8px;
+}
+
+   body {
+  color: white;
+  background-color:#2f2f2f;
+}
+tbody{
+  background-color:#383737;
+}
+
+.table_div{
+padding-left : 25px;
+border-radius: 10px;
+background-color:#3a3939d4;
+margin : 10px;
+}
+.inner-table-body{
+    background-color: #383737ed;
+
+}
+
+.no_data_div{
+width:100%;
+text-align: center;
+padding: 40px 0;
+font-size : 26px;
 }

@@ -14,7 +14,6 @@ import java.util.*
 class RequestHandler(mContext: Context) {
     private val mAssets: AssetManager = mContext.resources.assets
 
-    @Throws(IOException::class)
     fun handle(socket: Socket) {
         var reader: BufferedReader? = null
         var output: PrintStream? = null

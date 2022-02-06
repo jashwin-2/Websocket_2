@@ -2,18 +2,19 @@ package com.example.local_server
 
 import android.content.Context
 import android.util.Log
+import com.example.local_server.model.SessionDetails
 import java.lang.Exception
 import java.lang.NumberFormatException
 
-object LoggerAgent {
-    private val TAG = LoggerAgent::class.java.simpleName
+object LoggingAgent {
+    private val TAG = LoggingAgent::class.java.simpleName
     private const val DEFAULT_PORT = 8000
     private const val WEB_SOCKET_PORT = 8001
     private var clientServer: ClientServer? = null
     private var websocketsServer : WebSocketServer? = null
     private var addresses = mutableListOf<String>()
 
-      fun initialize(context: Context?,serverPort : Int , onWebSocketInitialized : (webSocket : WebSocketServer)->Unit) {
+      fun initialize(context: Context?, serverPort : Int, data : SessionDetails, onWebSocketInitialized : (webSocket : WebSocketServer)->Unit) {
         var portNumber: Int
         try {
             portNumber = serverPort
@@ -25,7 +26,7 @@ object LoggerAgent {
         clientServer = ClientServer(context, portNumber)
         clientServer!!.start(onError)
 
-        websocketsServer = WebSocketServer(context, WEB_SOCKET_PORT)
+        websocketsServer = WebSocketServer(context, WEB_SOCKET_PORT,data)
         websocketsServer!!.start()
           onWebSocketInitialized(websocketsServer!!)
         addresses = NetworkUtils.getAddress(serverPort)

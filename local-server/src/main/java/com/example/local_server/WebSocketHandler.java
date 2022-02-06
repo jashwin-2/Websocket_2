@@ -6,6 +6,10 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.example.local_server.model.SessionDetails;
+import com.example.local_server.model.JsonData;
+import com.google.gson.Gson;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -21,9 +25,9 @@ import java.util.regex.Pattern;
 
 public class WebSocketHandler {
     AssetManager mAssets;
+    public SessionDetails sessionDetails;
     public WebSocketCallback callback;
     private OutputStream out;
-    private ServerSocket server;
     public ArrayBlockingQueue<String> messages = new ArrayBlockingQueue<>(20);
 
     public void setCallback(WebSocketCallback callback) {
@@ -33,16 +37,16 @@ public class WebSocketHandler {
     public Boolean isClientConnected = false;
 
 
-    public WebSocketHandler(AssetManager mAssets) {
+    public WebSocketHandler(AssetManager mAssets, SessionDetails data) {
         this.mAssets = mAssets;
+        this.sessionDetails = data;
     }
 
-    public void handle(Socket client, ServerSocket webSocket) {
+    public void handle(@NonNull Socket client) {
         try {
 
             InputStream in = client.getInputStream();
             out = client.getOutputStream();
-            this.server = webSocket;
             Scanner s = new Scanner(in, "UTF-8");
 
             try {
@@ -63,6 +67,8 @@ public class WebSocketHandler {
                             + "\r\n\r\n").getBytes(StandardCharsets.UTF_8);
 
                     out.write(response, 0, response.length);
+                    JsonData data1 = new JsonData(JsonData.INITIAL_DATA,0,new Gson().toJson(this.sessionDetails));
+                    out.write(encode(new Gson().toJson(data1)));
                     isClientConnected = true;
                     activateWriter();
                     printInputStream(in);
