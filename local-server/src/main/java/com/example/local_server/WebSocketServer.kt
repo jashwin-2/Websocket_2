@@ -56,10 +56,10 @@ class WebSocketServer(context: Context?, port: Int, sessionDetails : SessionDeta
     }
 
        fun sendStatsToClient(statistics : JsonData){
-           sendJsonStringToClient(statistics)
+           sendJsonToClient(statistics)
     }
 
-    private fun sendJsonStringToClient(statistics: JsonData) {
+    private fun sendJsonToClient(statistics: JsonData) {
         mRequestHandler.apply {
             if (isClientConnected) {
                 val data = Gson().toJson(statistics)
@@ -69,10 +69,10 @@ class WebSocketServer(context: Context?, port: Int, sessionDetails : SessionDeta
         }
     }
 
-    fun sendLogMessage(logMessage : LogMessage) {
-            val data = Gson().toJson(logMessage)
-            JsonData(JsonData.LOG_MESSAGE,4,data).also {
-                sendJsonStringToClient(it)
+    fun sendLogMessage(logMessage : LogMessage,order : Int) {
+
+            JsonData(JsonData.LOG_MESSAGE,order,logMessage).also {
+                sendJsonToClient(it)
             }
 
     }

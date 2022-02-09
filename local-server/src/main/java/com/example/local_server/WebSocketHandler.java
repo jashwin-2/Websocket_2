@@ -67,7 +67,7 @@ public class WebSocketHandler {
                             + "\r\n\r\n").getBytes(StandardCharsets.UTF_8);
 
                     out.write(response, 0, response.length);
-                    JsonData data1 = new JsonData(JsonData.INITIAL_DATA,0,new Gson().toJson(this.sessionDetails));
+                    JsonData data1 = new JsonData(JsonData.INITIAL_DATA,0,this.sessionDetails);
                     out.write(encode(new Gson().toJson(data1)));
                     isClientConnected = true;
                     activateWriter();

@@ -11,10 +11,13 @@ import com.example.local_server.WebSocketServer
 import com.example.local_server.model.SessionDetails
 import com.example.local_server.model.JsonData
 import com.example.local_server.model.LogMessage
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
@@ -26,7 +29,7 @@ class MainActivity : AppCompatActivity() {
         const val VIDEO_STATS = 2
         const val STATS_1 = 3
         const val STATS_2 = 4
-        const val LOGS = 5
+        const val LOGS = 6
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,10 +41,10 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, it.localizedMessage, Toast.LENGTH_LONG).show()
         }
         val sessionDetails = SessionDetails(
-            listOf(
+            mapOf(
                 AUDIO_STATS to "Audio Stats",
                 VIDEO_STATS to "Video Stats", STATS_1 to "Stats 4", STATS_2 to "Stats 5"
-            ), LOGS to "Logs"
+            ), mapOf(LOGS to "Logs",7 to "Logs 1")
         )
         LoggingAgent.initialize(
             context = applicationContext,
@@ -90,25 +93,30 @@ class MainActivity : AppCompatActivity() {
     fun sendStats() {
         val type = JsonData.TABLE_DATA
         val audioStats = Objects.requireNonNull(getJsonFromAssets(this.assets, "audio_stats.json"))
+            .run { Gson().fromJson(this, Any::class.java) }
         val videoStats = Objects.requireNonNull(getJsonFromAssets(this.assets, "video_stats.json"))
-        webSocket?.sendStatsToClient(JsonData(type, VIDEO_STATS, videoStats!!))
-        webSocket?.sendStatsToClient(JsonData(type, STATS_1, videoStats!!))
-        webSocket?.sendStatsToClient(JsonData(type, STATS_2, audioStats!!))
-        webSocket?.sendStatsToClient(JsonData(type, AUDIO_STATS, audioStats!!))
+            .run { Gson().fromJson(this, Any::class.java) }
+
+        webSocket?.sendStatsToClient(JsonData(type, VIDEO_STATS, videoStats))
+        webSocket?.sendStatsToClient(JsonData(type, STATS_1, videoStats))
+        webSocket?.sendStatsToClient(JsonData(type, STATS_2, audioStats))
+        webSocket?.sendStatsToClient(JsonData(type, AUDIO_STATS, audioStats))
 
     }
 
     fun sendLog() {
+        val i = if (count%2==0) 6 else 7
+
         LogMessage(LogMessage.ERROR, "Error Log").also {
-            webSocket?.sendLogMessage(it)
+            webSocket?.sendLogMessage(it,i)
         }
         LogMessage(LogMessage.INFO, "Info log ").also {
-            webSocket?.sendLogMessage(it)
+            webSocket?.sendLogMessage(it,i)
         }
         LogMessage(LogMessage.WARN, "Warn Log").also {
-            webSocket?.sendLogMessage(it)
+            webSocket?.sendLogMessage(it,i)
         }
-
+        count++
 
     }
 }
