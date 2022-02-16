@@ -3,6 +3,7 @@ package com.example.local_server
 
 import android.content.Context
 import android.util.Log
+import com.example.local_server.model.GraphData
 import com.example.local_server.model.SessionDetails
 import com.example.local_server.model.JsonData
 import com.example.local_server.model.LogMessage
@@ -71,15 +72,21 @@ class WebSocketServer(context: Context?, port: Int, sessionDetails : SessionDeta
 
     fun sendLogMessage(logMessage : LogMessage,order : Int) {
 
-            JsonData(JsonData.LOG_MESSAGE,order,logMessage).also {
+            JsonData(JsonData.LOG_MESSAGE,logMessage,order).also {
                 sendJsonToClient(it)
             }
 
+    }
+    fun sendGraphData(list: MutableList<GraphData>) {
+        JsonData(JsonData.GRAPH_DATA,list).also {
+            sendJsonToClient(it)
+        }
     }
 
     fun isClientConnected(): Boolean = mRequestHandler.isClientConnected
 
     fun setWebSocketCallback(callback : WebSocketCallback) = mRequestHandler.setCallback(callback)
+
 
     companion object {
         private const val TAG = "ClientServer"

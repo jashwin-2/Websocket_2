@@ -16,7 +16,8 @@ Object.freeze(LogLevels);
 
 
 var latestStats = new Map();
-var log_queues = new Map();
+var logQues = new Map();
+var charts = new Map();
 var ids = new Map();
 var tables;
 var logs;
@@ -37,14 +38,16 @@ function initializeSocket() {
         var jsonData = JSON.parse(event.data);
 
         if (jsonData.type == MessageTypes.TABLE_DATA) {
-            if (getDetails(jsonData.id).length == 0)
+            if (getCreatedDetails(jsonData.id).length == 0)
                 createTable(jsonData.json, jsonData.id);
             else
-                update(jsonData.json, jsonData.id);
+                updateTable(jsonData.json, jsonData.id);
         } else if (jsonData.type == MessageTypes.LOG_MESSAGE) {
-            log_queues.get(parseInt(jsonData.id)).enqueue(jsonData.json);
+            logQues.get(parseInt(jsonData.id)).enqueue(jsonData.json);
         } else if (jsonData.type == MessageTypes.INITIAL_DATA) {
-            setIds(jsonData.json);
+            initializeWebPage(jsonData.json);
+        } else if (jsonData.type == MessageTypes.GRAPH_DATA) {
+            updateCharts(jsonData.json);
         }
 
 
@@ -65,7 +68,7 @@ function initializeSocket() {
 
 }
 
-function setIds(data) {
+function initializeWebPage(data) {
     tables = $.map(data.tables, mapper);
     graphs = $.map(data.graphs, mapper);
     logs = $.map(data.logs, mapper);
@@ -75,9 +78,11 @@ function setIds(data) {
     addToMap(graphs)
     addToMap(logs)
     console.log(ids)
-    initializeWebPage();
+    initializeUIElements();
 
 }
+
+
 
 function mapper(value, key) {
     return [
@@ -87,12 +92,21 @@ function mapper(value, key) {
 
 function addToMap(idsList) {
     for (let i = 0; i < idsList.length; i++) {
-        ids.set(idsList[i][0], idsList[i][1].replace(/ /g, ''))
+        ids.set(idsList[i][0], removeSpace(idsList[i][1]))
     }
 }
 
-function initializeWebPage() {
+function removeSpace(string) {
+    return string.replace(/ /g, '')
+}
 
+function initializeUIElements() {
+    initializeTables();
+    initializeLogcat();
+    initializeGraphs();
+}
+
+function initializeTables() {
     if (tables.length != 0) {
         $('body#body').append('<h1><b>Tables</b></h1>');
         $('body#body').append('<div id=\"no_data\"class=\"no_data_div \"> No data </div>')
@@ -107,41 +121,43 @@ function initializeWebPage() {
 
                 var row = $('<tr/>')
 
-                var col1 = $('<td/>', { id: tables[i][1].replace(/ /g, '') })
-                var col2 = $('<td/>', { id: tables[i + 1][1].replace(/ /g, '') })
+                var col = $('<td/>', { id: removeSpace(tables[i][1]) })
+                var col2 = $('<td/>', { id: removeSpace(tables[i + 1][1]) })
 
-                row.append(col1)
+                row.append(col)
                 row.append(col2)
 
-                var detail = $('<details/>', { id: 'parent_detail-' + tables[i][1].replace(/ /g, '') })
+                var detail = $('<details/>', { id: 'parent_detail-' + removeSpace(tables[i][1]) })
                 detail.append('<summary , class="title_summary"><b>' + tables[i][1] + '</b></summary>')
-                var detail1 = $('<details/>', { id: 'parent_detail-' + tables[i + 1][1].replace(/ /g, '') })
+                var detail1 = $('<details/>', { id: 'parent_detail-' + removeSpace(tables[i + 1][1]) })
                 detail1.append('<summary , class="title_summary" ><b>' + tables[i + 1][1] + '</b></summary>')
-                col1.append(detail)
+                col.append(detail)
                 col2.append(detail1)
                 tableBody.append(row)
 
                 i = i + 2;
             } else {
                 var row = $('<tr/>')
-                var col1 = $('<td/>', { id: tables[i][1].replace(/ /g, '') })
-                row.append(col1)
-                var detail = $('<details/>', { id: 'parent_detail-' + tables[i][1].replace(/ /g, '') })
+                var col = $('<td/>', { id: removeSpace(tables[i][1]) })
+                row.append(col)
+                var detail = $('<details/>', { id: 'parent_detail-' + removeSpace(tables[i][1]) })
                 detail.append('<summary , class="title_summary"><b>' + tables[i][1] + '</b></summary>')
-                col1.append(detail)
+                col.append(detail)
                 tableBody.append(row)
                 break;
             }
         }
-        var div = $('<div/>', { id: "parent_table_div", class: "table_div" });
+        var div = $('<div/>', { id: "parent_table_div", class: "background_div" });
         div.append(parentTable)
         $('body#body').append(div);
         document.getElementById("parent_table_div").style.visibility = "hidden"
     }
+}
 
+function initializeLogcat() {
     if (logs.length != 0) {
         $('body#body').append('<h1><b>Logs</b></h1>');
-        var div = $('<div/>', { class: "table_div" });
+        var div = $('<div/>', { class: "background_div" });
         $('body#body').append(div)
         var logTable = $('<table/>', { id: "log_table", class: "table table-borderless" })
         div.append(logTable)
@@ -149,18 +165,135 @@ function initializeWebPage() {
         for (let i = 0; i < logs.length; i++) {
             var detail = $('<details/>')
             detail.append('<summary class="title_summary"><b>' + logs[i][1] + '</b></summary>')
-            var log_div = $('<div/>', { id: 'log_cat-' + logs[i][0], style: "overflow:auto", class: "log_cat_div" })
-            detail.append(log_div);
+            var logCatDiv = $('<div/>', { id: 'log_cat-' + logs[i][0], style: "overflow:auto", class: "log_cat_div" })
+            detail.append(logCatDiv);
             var row = $('<tr/>')
             row.append(detail)
             logTable.append(row)
-            log_queue = new LogQueue('log_cat-' + logs[i][0]);
-            log_queues.set(parseInt(logs[i][0]), log_queue)
-            console.log(log_queues)
+            var logQueue = new LogQueue('log_cat-' + logs[i][0]);
+            logQues.set(parseInt(logs[i][0]), logQueue)
+            console.log(logQues)
         }
 
 
     }
+}
+
+function initializeGraphs() {
+    if (graphs.length != 0) {
+        var div = $('<div/>', { class: "background_div" });
+        var detail = $('<details/>', { id: "graph_detail" })
+        div.append(detail)
+
+        var graphDiv = $('<div/>', { id: 'graph-div', class: "graph_div" })
+        detail.append(graphDiv);
+        $('body#body').append(div)
+        detail.append('<summary class="title_summary"><b>Graphs</b></summary>')
+        for (let i = 0; i < graphs.length; i++) {
+            var secondryDiv = $('<div/>', { class: 'secondary_graph_div' })
+            var canvas = $('<canvas/>', { id: removeSpace(graphs[i][1]), style: 'height: 200px;width: 100%;' })
+            secondryDiv.append(canvas)
+            graphDiv.append(secondryDiv)
+            createGraph(removeSpace(graphs[i][1]))
+        }
+
+    }
+
+}
+
+function createGraph(div_id) {
+
+    const plugin = {
+        title: {
+            display: true,
+            text: 'Title',
+            fontColor: "#ffffff",
+        },
+        id: 'custom_canvas_background_color',
+        beforeDraw: (chart) => {
+            const ctx = chart.canvas.getContext('2d');
+            ctx.save();
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.fillStyle = "#464545";
+            ctx.fillRect(0, 0, chart.width, chart.height);
+            ctx.restore();
+        }
+    };
+
+
+
+    var chart = new Chart(div_id, {
+        plugins: [plugin],
+        type: 'line',
+        data: {
+            datasets: [{
+                borderColor: "#9dc0f5",
+                data: [],
+                showLine: true,
+                fill: false,
+                borderWidth: 1.2,
+            }]
+        },
+        options: {
+            plugins: {
+                title: {
+                    display: true,
+                    text: div_id,
+                    color: "#ffffff",
+
+                },
+                legend: {
+                    display: false
+                }
+            },
+            animation: false,
+            responsive: true,
+            maintainAspectRatio: false,
+            elements: {
+                point: {
+                    radius: 0
+                }
+            },
+            scales: {
+
+                x: {
+                    type: 'realtime',
+                    realtime: {
+                        duration: 300000,
+                        delay: 3000,
+                    },
+                    ticks: {
+                        color: "#ffffff",
+                    },
+                    grid: {
+                        borderColor: "#817f7f",
+                        color: "#817f7f"
+                    },
+                    display: true
+
+                },
+                y: {
+                    ticks: {
+                        color: "#ffffff",
+                        beginAtZero: false,
+                        autoSkip: true,
+                        maxTicksLimit: 6
+                    },
+                    grid: {
+                        borderColor: "#817f7f",
+                        display: false
+                    },
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        color: "#ffffff",
+                    }
+                },
+            }
+        }
+    });
+    charts.set(div_id, chart)
 
 }
 
@@ -175,15 +308,14 @@ function createTable(stats, id) {
         table.append(body)
         detail.append(table)
         Object.entries(value).forEach((entry1) => {
-                const [key1, value1] = entry1;
-                var row = $('<tr/>', { id: key1 + "row", Text: key1 })
+            const [key1, value1] = entry1;
+            var row = $('<tr/>', { id: key1 + "row", Text: key1 })
 
-                row.append("<td  id='key-" + key1 + "'>" + key1 + "</td>")
-                row.append("<td style=\"word-break: break-all\" id=value-" + key + "-" + key1 + ">" + value1 + "</td>")
-                body.append(row)
+            row.append("<td  id='key-" + key1 + "'>" + key1 + "</td>")
+            row.append("<td style=\"word-break: break-all\" id=value-" + key + "-" + key1 + ">" + value1 + "</td>")
+            body.append(row)
 
-            })
-            // $('td#' + ids.get(id)).append(detail)
+        })
         $('details#parent_detail-' + ids.get(id)).append(detail)
         addToggleListener(id, key)
 
@@ -205,8 +337,8 @@ function addToggleListener(id, key) {
     })
 }
 
-function update(stats, id) {
-    var opened = getDetails(id).filter(detail => detail.hasAttribute("open"))
+function updateTable(stats, id) {
+    var opened = getCreatedDetails(id).filter(detail => detail.hasAttribute("open"))
     latestStats.set(id, stats)
 
     if (opened.length == 0)
@@ -230,7 +362,21 @@ function update(stats, id) {
 
 }
 
-function getDetails(statsType) {
+function updateCharts(data) {
+    for (let i = 0; i < data.length; i++) {
+
+        var chart = charts.get(removeSpace(data[i].id))
+
+        chart.data.datasets[0].data.push({
+            x: data[i].timestamp,
+            y: data[i].value
+        });
+        chart.update();
+    }
+
+}
+
+function getCreatedDetails(statsType) {
 
     var matches = [];
 
@@ -281,10 +427,13 @@ class LogQueue {
 }
 
 function activateLogger(queue) {
+
     var log = queue.dequeue();
     var div = document.getElementById(queue.log_div)
     if (log == null)
         return
+
+
     const isScrolledToBottom = div.scrollHeight - div.clientHeight <= div.scrollTop + 1
     const newLogMessage = document.createElement("div")
     newLogMessage.innerHTML = "<p>" + log.time + "&ensp;" + log.logLevel + ":&emsp;" + log.logMessage + "</p>";
@@ -294,13 +443,13 @@ function activateLogger(queue) {
         newLogMessage.style.color = 'lightblue'
 
     div.appendChild(newLogMessage);
+
     if (isScrolledToBottom) {
         div.scrollTop = div.scrollHeight - div.clientHeight
     }
 
     removeLogIfExceedLimit(queue.log_div);
 
-    // scroll to bottom if isScrolledToBottom is true
 
 }
 
@@ -327,7 +476,7 @@ function updateRow(data, rowTitle) {
 
 function removeLogIfExceedLimit(div) {
     var len = $("#" + div).children().length;
-    if (len >= 50) {
+    if (len >= 80) {
         $("#" + div).find('div').first().remove();
     }
 }

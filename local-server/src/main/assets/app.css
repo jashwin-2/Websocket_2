@@ -102,11 +102,12 @@ tbody {
     background-color: #383737;
 }
 
-.table_div {
+.background_div {
     padding-left: 25px;
     border-radius: 10px;
     background-color: #3a3939d4;
     margin: 10px;
+    width: 100%;
 }
 
 .inner-table-body {
@@ -118,4 +119,20 @@ tbody {
     text-align: center;
     padding: 35px 0;
     font-size: 26px;
+}
+
+.graph_div {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.secondary_graph_div {
+    height: 260px;
+    width: 95%;
+    padding: 10px;
+    margin-right: 6px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    background-color: #464545;
 }

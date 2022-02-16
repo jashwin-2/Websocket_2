@@ -1,6 +1,6 @@
 package com.example.local_server.model
 
-data class JsonData(val type:Int,val id : Int, val json : Any)
+data class JsonData(val type:Int,val json : Any,val id : Int=0)
 {
     companion object{
         const val TABLE_DATA = 1
