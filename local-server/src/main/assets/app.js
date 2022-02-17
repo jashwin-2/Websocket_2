@@ -260,7 +260,7 @@ function createGraph(div_id) {
                     type: 'realtime',
                     realtime: {
                         duration: 300000,
-                        delay: 3000,
+                        delay: 2000,
                     },
                     ticks: {
                         color: "#ffffff",
