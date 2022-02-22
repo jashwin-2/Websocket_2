@@ -2,16 +2,15 @@ package com.example.socket
 
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.local_server.LoggingAgent
-import com.example.local_server.Utils.getJsonFromAssets
-import com.example.local_server.WebSocketCallback
-import com.example.local_server.WebSocketServer
-import com.example.local_server.model.GraphData
-import com.example.local_server.model.SessionDetails
-import com.example.local_server.model.JsonData
-import com.example.local_server.model.LogMessage
+import com.zoho.vtouch.logging_agent.LoggingAgent
+import com.zoho.vtouch.logging_agent.Utils.getJsonFromAssets
+import com.zoho.vtouch.logging_agent.WebSocketCallback
+import com.zoho.vtouch.logging_agent.WebSocketServer
+import com.zoho.vtouch.logging_agent.model.GraphData
+import com.zoho.vtouch.logging_agent.model.SessionDetails
+import com.zoho.vtouch.logging_agent.model.JsonData
+import com.zoho.vtouch.logging_agent.model.LogMessage
 import com.google.gson.Gson
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.GlobalScope
@@ -24,54 +23,51 @@ class MainActivity : AppCompatActivity() {
     var webSocket: WebSocketServer? = null
 
     companion object {
-        const val AUDIO_STATS = 1
-        const val VIDEO_STATS = 2
-        const val STATS_1 = 3
-        const val STATS_2 = 4
-        const val LOGS = 6
+        const val AUDIO_STATS = "Audio Stats"
+        const val VIDEO_STATS = "Video Stats"
+        const val STATS_4 = "Stats 4"
+        const val STATS_5 = "Stats 5"
+        const val LOGS = "Logs"
+        const val LOGS_1 = "Logs 1"
+        const val GRAPH_1 = "Graph1"
+        const val GRAPH_2 = "Graph2"
+        const val GRAPH_3 = "Graph3"
+        const val GRAPH_4 = "Graph4"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        LoggingAgent.setOnErrorListener {
-            Log.d("Error", it.stackTraceToString())
-            Toast.makeText(this, it.localizedMessage, Toast.LENGTH_LONG).show()
-        }
+
         val sessionDetails = SessionDetails(
-            mapOf(
-                AUDIO_STATS to "Audio Stats",
-                VIDEO_STATS to "Video Stats", STATS_1 to "Stats 4", STATS_2 to "Stats 5"
+            listOf(
+                AUDIO_STATS,
+                VIDEO_STATS, STATS_4, STATS_5
             ),
-            mapOf(LOGS to "Logs", 7 to "Logs 1"),
-            mapOf(8 to "Graph1", 9 to "Graph2", 10 to "Graph3",11 to "Graph4")
+            listOf(LOGS, LOGS_1),
+            listOf(GRAPH_1, GRAPH_2, GRAPH_3, GRAPH_4)
         )
-        LoggingAgent.initialize(
+        webSocket = LoggingAgent.initialize(
             context = applicationContext,
             serverPort = 8000,
-            sessionDetails
-        ) { webSocket ->
-            Log.d("Success", "Socket initialized")
+            sessionDetails,
+            object : WebSocketCallback {
+                override fun onError(ex: Exception?) {
+                    ex?.localizedMessage?.let { Log.d("Error", it) }
+                }
 
-            this.webSocket = webSocket
-        }
+                override fun onMessageReceived(message: String?) {
+                    Log.d("Message Received", "Client : $message")
+                }
 
+            }
+        )
 
         et_address.text = LoggingAgent.getAddress()
 
-        webSocket?.setWebSocketCallback(object : WebSocketCallback {
-            override fun onError(ex: Exception?) {
-                ex?.localizedMessage?.let { Log.d("Error", it) }
-            }
 
-            override fun onMessageReceived(message: String?) {
-                Log.d("Message Received", "Client : $message")
-            }
-
-        })
-
-        var i = 0
+        
 
         GlobalScope.launch {
             sendGraphs()
@@ -80,7 +76,6 @@ class MainActivity : AppCompatActivity() {
                 if (webSocket?.isClientConnected() == true) {
                     sendStats()
                     sendLog()
-
                 }
 
             }
@@ -100,25 +95,52 @@ class MainActivity : AppCompatActivity() {
         val videoStats = Objects.requireNonNull(getJsonFromAssets(this.assets, "video_stats.json"))
             .run { Gson().fromJson(this, Any::class.java) }
 
-        webSocket?.sendStatsToClient(JsonData(type, videoStats, VIDEO_STATS))
-        webSocket?.sendStatsToClient(JsonData(type, videoStats, STATS_1))
-        webSocket?.sendStatsToClient(JsonData(type, audioStats, STATS_2))
-        webSocket?.sendStatsToClient(JsonData(type, audioStats, AUDIO_STATS))
+        webSocket?.sendStatsToClient(
+            JsonData(
+                type,
+                videoStats,
+                VIDEO_STATS
+            )
+        )
+        webSocket?.sendStatsToClient(
+            JsonData(
+                type,
+                videoStats,
+                STATS_4
+            )
+        )
+        webSocket?.sendStatsToClient(
+            JsonData(
+                type,
+                audioStats,
+                STATS_5
+            )
+        )
+        webSocket?.sendStatsToClient(
+            JsonData(
+                type,
+                audioStats,
+                AUDIO_STATS
+            )
+        )
 
     }
 
     fun sendLog() {
-        val i = if (count % 2 == 0) 6 else 7
+        val id = if (count % 2 == 0) LOGS else LOGS_1
+        LogMessage(
+            LogMessage.ERROR,
+            "Error Log"
+        ).also {
+            webSocket?.sendLogMessage(it, id)
+        }
+        LogMessage(
+            LogMessage.INFO,
+            "Info log "
+        ).also {
+            webSocket?.sendLogMessage(it, id)
+        }
 
-        LogMessage(LogMessage.ERROR, "Error Log").also {
-            webSocket?.sendLogMessage(it, i)
-        }
-        LogMessage(LogMessage.INFO, "Info log ").also {
-            webSocket?.sendLogMessage(it, i)
-        }
-        LogMessage(LogMessage.WARN, "Warn Log").also {
-            webSocket?.sendLogMessage(it, i)
-        }
         count++
 
     }
@@ -131,10 +153,26 @@ class MainActivity : AppCompatActivity() {
                     val list = mutableListOf<GraphData>()
                     list.addAll(
                         listOf(
-                            GraphData("Graph1", (0..100).random(), System.currentTimeMillis()),
-                            GraphData("Graph2", (0..100).random(), System.currentTimeMillis()),
-                            GraphData("Graph3", (0..100).random(), System.currentTimeMillis()),
-                            GraphData("Graph4", (0..100).random(), System.currentTimeMillis()),
+                            GraphData(
+                                GRAPH_1,
+                                (0..100).random(),
+                                System.currentTimeMillis()
+                            ),
+                            GraphData(
+                                GRAPH_2,
+                                (0..100).random(),
+                                System.currentTimeMillis()
+                            ),
+                            GraphData(
+                                GRAPH_3,
+                                (0..100).random(),
+                                System.currentTimeMillis()
+                            ),
+                            GraphData(
+                                GRAPH_4,
+                                (0..100).random(),
+                                System.currentTimeMillis()
+                            ),
                         )
                     )
                     webSocket?.sendGraphData(list)

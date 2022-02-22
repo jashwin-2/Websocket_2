@@ -8,4 +8,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "Socket"
 include ':app'
-include ':local-server'
+include ':logging_agent'
